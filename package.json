@@ -1,0 +1,27 @@
+{
+  "name": "an-increasing-series-of-dots",
+  "version": "1.0.0",
+  "description": "An increasing series of dots",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://revdancatt@github.com/revdancatt/an-increasing-series-of-dots.git"
+  },
+  "keywords": [
+    "genartclub",
+    "revdancatt",
+    "fxhash"
+  ],
+  "author": "revdancatt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/revdancatt/an-increasing-series-of-dots/issues"
+  },
+  "homepage": "https://github.com/revdancatt/an-increasing-series-of-dots#readme",
+  "devDependencies": {
+    "standard": "^17.1.0"
+  }
+}
