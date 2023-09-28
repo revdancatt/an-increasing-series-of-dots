@@ -26,7 +26,11 @@ const nextFrame = null
 let resizeTmr = null
 const maxIterations = 64
 let thumbnailTaken = false
+let forceDownloaded = false
 const dumpOutputs = false
+const urlSearchParams = new URLSearchParams(window.location.search)
+const urlParams = Object.fromEntries(urlSearchParams.entries())
+const prefix = 'an_increasing_series_of_dots'
 
 window.$fxhashFeatures = {}
 
@@ -208,11 +212,8 @@ const makeFeatures = () => {
 makeFeatures()
 
 const init = async () => {
-  //  I should add a timer to this, but really how often to people who aren't
-  //  the developer resize stuff all the time. Stick it in a digital frame and
-  //  have done with it!
+  // Resize the canvas when the window resizes, but only after 100ms of no resizing
   window.addEventListener('resize', async () => {
-    //  If we do resize though, work out the new size...
     clearTimeout(resizeTmr)
     resizeTmr = setTimeout(async () => {
       await layoutCanvas()
@@ -235,24 +236,44 @@ const layoutCanvas = async () => {
     cHeight = wHeight
     cWidth = wHeight / ratio
   }
-  const canvas = document.getElementById('target')
-  if (highRes) {
-    canvas.height = 8192
-    canvas.width = 8192 / ratio
-  } else {
-    canvas.width = Math.min((8192 / 2), cWidth * 2)
-    canvas.height = Math.min((8192 * ratio / 2), cHeight * 2)
-    //  Minimum size to be half of the high rez cersion
-    if (Math.min(canvas.width, canvas.height) < 8192 / 2) {
-      if (canvas.width < canvas.height) {
-        canvas.height = 8192 / 2
-        canvas.width = 8192 / 2 / ratio
-      } else {
-        canvas.width = 8192 / 2
-        canvas.height = 8192 / 2 / ratio
-      }
-    }
+  // Grab any canvas elements so we can delete them
+  const canvases = document.getElementsByTagName('canvas')
+  for (let i = 0; i < canvases.length; i++) {
+    canvases[i].remove()
   }
+  //  Now create a new canvas with the id "target" and attach it to the body
+  const newCanvas = document.createElement('canvas')
+  newCanvas.id = 'target'
+  // Attach it to the body
+  document.body.appendChild(newCanvas)
+
+  let targetHeight = 4096
+  let targetWidth = targetHeight / ratio
+  let dpr = window.devicePixelRatio || 1
+
+  //  If the alba params are forcing the width, then use that
+  if (window && window.alba && window.alba.params && window.alba.params.width) {
+    targetWidth = window.alba.params.width
+    targetHeight = Math.floor(targetWidth * ratio)
+  }
+
+  // If *I* am forcing the width, then use that
+  if ('forceWidth' in urlParams) {
+    targetWidth = parseInt(urlParams.forceWidth)
+    targetHeight = Math.floor(targetWidth * ratio)
+    dpr = 1
+  }
+
+  // Log the width and height
+  targetWidth = targetWidth * dpr
+  targetHeight = targetHeight * dpr
+
+  const canvas = document.getElementById('target')
+  canvas.height = targetHeight
+  canvas.width = targetWidth
+
+  // Set the width onto the alba params
+  // window.alba.params.width = canvas.width
 
   canvas.style.position = 'absolute'
   canvas.style.width = `${cWidth}px`
@@ -306,11 +327,20 @@ const drawCanvas = async () => {
     $fx.preview()
     thumbnailTaken = true
   }
+
+  // If we are forcing download, then do that now
+  if ('forceDownload' in urlParams && forceDownloaded === false) {
+    forceDownloaded = true
+    await autoDownloadCanvas()
+    window.parent.postMessage('forceDownloaded', '*')
+  }
 }
 
 const autoDownloadCanvas = async (showHash = false) => {
   const element = document.createElement('a')
-  element.setAttribute('download', `an_increasing_series_of_dots_${fxhash}`)
+  element.setAttribute('download', `${prefix}_${fxhash}`)
+  // If a force Id is in the URL, then add that to the filename
+  if ('forceId' in urlParams) element.setAttribute('download', `${prefix}_${urlParams.forceId.toString().padStart(4, '0')}_${fxhash}`)
   element.style.display = 'none'
   document.body.appendChild(element)
   let imageBlob = null
